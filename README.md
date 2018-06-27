@@ -40,6 +40,6 @@ h.train(train_x, train_y, checkpoint_path='saved_models/model.h5')
 
 View sentence and word-level attention activations
 ```python
-activation_maps = h.activation_maps('they have some pretty interesting things here. i will definitely go back again.')
+activation_maps = h.activation_maps('loved it! will definitely go back again.')
 print(activation_maps)
 ```
