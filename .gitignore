@@ -1,0 +1,14 @@
+*~
+.venv
+venv
+!.gitkeep
+tmp
+.DS_Store
+.idea
+*.log
+*.map
+*.pyc
+*.h5
+data/
+saved_models/
+logs/
