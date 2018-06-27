@@ -11,6 +11,7 @@ HNATT is a deep neural network for document classification. It learns hierarchic
 | `yelp.py` | Data loader for Yelp review data used for training and testing. |
 | `text_util.py` | Utility function for normalizing review texts. |
 | `main.py` | Demo that trains HNATT on a subset of Yelp reviews and displays attention activation maps at both sentence and word levels on an example review. |
+
 *A TensorFlow backend is assumed by the Attention layer.
 
 ### Get started
