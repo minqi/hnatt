@@ -15,31 +15,31 @@ HNATT is a deep neural network for document classification. It learns hierarchic
 
 ### Get started
 Install dependencies in a new virtual environement via
-```
+```bash
 virtualenv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 Give it a spin
-```
+```bash
 python main.py
 ```
 
 Load `n` reviews from yelp for training, with 90/10 training/test split:
-```
+```python
 import yelp
 (train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=1e5, train_ratio=0.9)
 ```
 
 Train your HNATT
-```
+```python
 h = HNATT()
 h.train(train_x, train_y, checkpoint_path='saved_models/model.h5')
 ```
 
 View sentence and word-level attention activations
-```
+```python
 activation_maps = h.activation_maps('they have some pretty interesting things here. i will definitely go back again.')
 print(activation_maps)
 ```
