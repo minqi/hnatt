@@ -35,6 +35,7 @@ import yelp
 
 Train your HNATT
 ```python
+from hnatt import HNATT
 h = HNATT()
 h.train(train_x, train_y, checkpoint_path='saved_models/model.h5')
 ```
