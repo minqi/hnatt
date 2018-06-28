@@ -9,6 +9,7 @@ tmp
 *.map
 *.pyc
 *.h5
+__pycache__/
 data/
 saved_models/
 logs/

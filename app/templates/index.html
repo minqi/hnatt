@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+	<header>
+  	<meta charset="utf-8">
+		<title>HNATT demo</title>
+		<style>
+			body {
+				font-family: 'HelveticaNeue', 'Helvetica', 'Arial', sans-serif;
+				font-size: 18px;
+			}
+
+			ul {
+				list-style-type: none;
+			}
+
+			#text-input {
+				width: 100%;
+				height: 320px;
+				font-size: 18px;
+			}
+
+			.submit-btn {
+				text-align: center;
+				background: black;
+				color: white;
+				padding: 8px;
+				font-size: 18px;
+				transition: all 0.2s ease-out;
+			}
+			.submit-btn:hover {
+				background: #fafafa;
+				color: black;
+				cursor: pointer;
+			}
+
+			.sentence-label {
+				width: 32px;
+				height: 16px;
+				display: inline-block;
+			}
+
+			.word {
+				margin: 0 2px;
+			}
+		</style>
+	</header>	
+
+	<body>
+		<textarea id='text-input'
+			placeholder='Enter review text.'>they have some pretty interesting things here. i will definitely go back again.</textarea>
+		<div class='submit-btn' onclick='onClickSubmit()'>Run</div>
+		<div class='activation-map'>
+			<ul id='sentence-list'>
+
+			</ul>
+		</div>
+		<footer>
+			<!-- @todo: logic for sending request for activation map and rendering activation maps -->
+			<script>
+				let xhttp = undefined;
+				if (window.XMLHttpRequest) {
+				    // code for modern browsers
+				    xhttp = new XMLHttpRequest();
+				 } else {
+				    // code for old IE browsers
+				    xhttp = new ActiveXObject("Microsoft.XMLHTTP");
+				}
+
+				let requestActivationMap = function(text, callback) {
+					xhttp.onreadystatechange = function() {
+					    if (this.readyState == 4 && this.status == 200) {
+					    	const activations = JSON.parse(this.responseText);
+					      callback(JSON.parse(activations));
+					    }
+					};
+					xhttp.open("GET", "activations?text=" + text, true);
+					xhttp.send();
+				}
+
+				let onClickSubmit = function(event) {
+					let text = document.getElementById("text-input").value;
+					requestActivationMap(text, renderActivationMap);
+				}
+
+				let getSentenceColorForActivation = function(a) {
+					return `rgba(0, 0, 255, ${a})`;
+				}
+
+				let getWordColorForActivation = function(a) {
+					return `rgba(255, 0, 0, ${a})`;
+				}
+
+				let createSentenceElement = function(sa, words) {
+					let sentenceLabel = document.createElement("div");
+					sentenceLabel.className='sentence-label';
+					sentenceLabel.style.backgroundColor = getSentenceColorForActivation(sa);
+
+					let sentenceElement = document.createElement("li");
+					sentenceElement.className = 'sentence';
+					sentenceElement.appendChild(sentenceLabel);
+
+					let s_weight = Math.sqrt(sa);
+					for (let i = 0; i < words.length; i++) {
+						let w = words[i];
+						sentenceElement.appendChild(createWordElement(w, s_weight));
+					}
+					sentenceElement.appendChild(createWordElement([['.'], 0], sa))
+
+					return sentenceElement;
+				}
+
+				let createWordElement = function(w, s_weight) {
+					let wordElement = document.createElement("span");
+					wordElement.className = 'word';
+					wordElement.style.backgroundColor = 
+						getWordColorForActivation(s_weight*w[1])
+					wordElement.innerHTML = w[0];
+					return wordElement;
+				}
+
+				let renderActivationMap = function(activations) {
+					const sentenceList = document.getElementById('sentence-list');
+					while (sentenceList.firstChild) {
+						sentenceList.removeChild(sentenceList.firstChild);
+					}
+					for (let i = 0; i < activations.length; i++) {
+						let s = activations[i];
+						let words = s[0];
+						let sa = s[1];
+						sentenceList.appendChild(createSentenceElement(sa, words))
+					}
+				}
+
+			</script>
+		</footer>
+	</body>
+
+</html>

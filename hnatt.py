@@ -1,4 +1,4 @@
-import datetime, pickle
+import datetime, pickle, json
 import numpy as np
 import keras
 from keras.models import *
@@ -203,7 +203,7 @@ class HNATT():
 		x = self._encode_input(x)
 		return self.model.predict(x)
 
-	def activation_maps(self, text):
+	def activation_maps(self, text, as_json=False):
 		normalized_text = normalize(text)
 		encoded_text = self._encode_input(text)[0]
 
@@ -213,6 +213,8 @@ class HNATT():
 		hidden_word_encodings = hidden_word_encoding_out.predict(encoded_text)
 		word_context = self.word_attention_model.get_layer('word_attention').get_weights()[0]
 		u_wattention = encoded_text*np.exp(np.squeeze(np.dot(hidden_word_encodings, word_context)))
+		if as_json:
+			u_wattention = u_wattention.astype(float)
 
 		# generate word, activation pairs
 		nopad_encoded_text = encoded_text[-len(normalized_text):]
@@ -234,8 +236,15 @@ class HNATT():
 			hidden_sentence_encoding_out.predict(np.expand_dims(encoded_text, 0)), 0)
 		sentence_context = self.model.get_layer('sentence_attention').get_weights()[0]
 		u_sattention = np.exp(np.squeeze(np.dot(hidden_sentence_encodings, sentence_context), -1))
+		if as_json:
+			u_sattention = u_sattention.astype(float)
 		nopad_sattention = u_sattention[-len(normalized_text):]
 		nopad_sattention = nopad_sattention/np.expand_dims(np.sum(nopad_sattention, -1), -1)
 
-		return list(zip(word_activation_maps, nopad_sattention))
+		activation_map = list(zip(word_activation_maps, nopad_sattention))
+		if as_json:
+			return json.dumps(activation_map)		
+
+		return activation_map
+
 
