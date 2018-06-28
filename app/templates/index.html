@@ -17,36 +17,74 @@
 				margin: 0;
 			}
 
+			.container {
+				display: flex;
+				align-items: center;
+				position: relative;
+				flex-direction: column;
+				justify-content: center;
+				height: 100vh;
+				min-height: 640px;
+			}
+
+			.top-box, .bottom-box {
+				display: flex;
+				flex: 1 1;
+				height: 100%;
+				width: 100%;
+			}
+			.bottom-box {
+				border-top: 1px solid #eaeaea;
+			}
 			#text-input {
 				width: 100%;
-				height: 240px;
+				height: 100%;
 				font-size: 18px;
 				outline: none;
 				border: none;
 				padding: 8px;
+				padding-bottom: 32px;
+				resize: none;
+				box-sizing: border-box;
 			}
 
 			.submit-btn {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				position: absolute;
 				text-align: center;
 				background: black;
 				color: white;
 				padding: 8px;
 				font-size: 18px;
+				height: 48px;
+				width: 128px;
+				box-sizing: border-box;
+				border-radius: 120px;
 				transition: all 0.2s ease-out;
 			}
 			.submit-btn:hover {
-				background: #fafafa;
-				color: black;
+				background: #777;
+				/*color: black;*/
 				cursor: pointer;
 			}
 
 			.activation-map {
+				flex: 1 1;
 				padding: 8px;
+				padding-top: 32px;
+    		max-width: 100%;
+    		box-sizing: border-box;
 			}
 
 			#sentence-list li {
 				display: flex;
 				align-items: center;
+			}
+
+			.sentence {
+				padding-left: 32px;
 			}
 
 			.sentence-label {
@@ -55,23 +93,31 @@
 				display: inline-block;
 			}
 
+			.words-container {
+				width: 100%;
+			}
+
 			.word {
+				display: inline-block;
 				padding: 0 4px;
 			}
 		</style>
 	</header>	
 
 	<body>
-		<textarea id='text-input'
-			placeholder='Enter review text.'>they have some pretty interesting things here. i will definitely go back again.</textarea>
-		<div class='submit-btn' onclick='onClickSubmit()'>Run</div>
-		<div class='activation-map'>
-			<ul id='sentence-list'>
-
-			</ul>
+		<div class='container'>
+			<div class='top-box'>
+			<textarea id='text-input'
+				placeholder='Enter review text.'>they have some pretty interesting things here. i will definitely go back again.</textarea>
+			</div>
+			<div class='submit-btn' onclick='onClickSubmit()'>Run</div>
+			<div class='bottom-box'>
+				<div class='activation-map'>
+					<ul id='sentence-list'></ul>
+				</div>
+			</div>	
 		</div>
 		<footer>
-			<!-- @todo: logic for sending request for activation map and rendering activation maps -->
 			<script>
 				let xhttp = undefined;
 				if (window.XMLHttpRequest) {
@@ -107,26 +153,31 @@
 				}
 
 				let createSentenceElement = function(sa, words) {
-					let sentenceLabel = document.createElement("div");
-					sentenceLabel.className='sentence-label';
-					sentenceLabel.style.backgroundColor = getSentenceColorForActivation(sa);
+					// let sentenceLabel = document.createElement("div");
+					// sentenceLabel.className='sentence-label';
+					// sentenceLabel.style.backgroundColor = getSentenceColorForActivation(sa);
 
 					let sentenceElement = document.createElement("li");
-					sentenceElement.className = 'sentence';
-					sentenceElement.appendChild(sentenceLabel);
+					sentenceElement.className	 = 'sentence'; 
+					sentenceElement.style.backgroundColor = getSentenceColorForActivation(sa);
+					// sentenceElement.appendChild(sentenceLabel);
 
+					let wordsContainer = document.createElement('div');
+					wordsContainer.className = 'words-container';
+					wordsContainer.style.backgroundColor = 'white';
 					let s_weight = Math.sqrt(sa);
 					for (let i = 0; i < words.length; i++) {
 						let w = words[i];
-						sentenceElement.appendChild(createWordElement(w, s_weight));
+						wordsContainer.appendChild(createWordElement(w, s_weight));
 					}
-					sentenceElement.appendChild(createWordElement([['.'], 0], sa))
+					wordsContainer.appendChild(createWordElement([['.'], 0], sa))
+					sentenceElement.appendChild(wordsContainer);
 
 					return sentenceElement;
 				}
 
 				let createWordElement = function(w, s_weight) {
-					let wordElement = document.createElement("span");
+					let wordElement = document.createElement("div");
 					wordElement.className = 'word';
 					wordElement.style.backgroundColor = 
 						getWordColorForActivation(s_weight*w[1])

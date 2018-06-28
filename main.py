@@ -4,7 +4,7 @@ from hnatt import HNATT
 YELP_DATA_PATH = 'data/yelp-dataset/yelp_review.csv'
 
 if __name__ == '__main__':
-	(train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=2e3)
+	(train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=3e4)
 
 	# initialize HNATT 
 	h = HNATT()	

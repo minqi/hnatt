@@ -212,7 +212,7 @@ class HNATT():
 			)
 		self.model.fit(x=encoded_train_x, y=train_y, 
 					   batch_size=16, 
-					   epochs=16, 
+					   epochs=8, 
 					   verbose=1, 
 					   callbacks=callbacks,
 					   validation_split=0.1,  

@@ -26,7 +26,7 @@ def load_data(path, size=1e4, train_ratio=0.8):
 	train_x = np.empty((0,))
 	train_y = np.empty((0,))
 	df = pd.read_csv(path, nrows=size, usecols=['stars', 'text'])
-	df = df.loc[df['stars'].isin([1, 5])]
+	# df = df.loc[df['stars'].isin([1, 5])]
 	df['text_tokens'] = df['text'].progress_apply(lambda x: normalize(x))
 
 	train_set = df[0:train_size].copy()
