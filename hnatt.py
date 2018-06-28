@@ -5,6 +5,7 @@ from keras.models import *
 from keras.layers import *
 from keras.optimizers import *
 from keras.callbacks import *
+from keras import regularizers
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing.text import one_hot
@@ -13,7 +14,8 @@ from keras.utils import CustomObjectScope
 from keras.engine.topology import Layer
 from keras import initializers
 
-from text_util import normalize
+from util.text_util import normalize
+from util.glove import load_glove_embedding
 
 # Uncomment below for debugging
 # from tensorflow.python import debug as tf_debug
@@ -22,23 +24,33 @@ from text_util import normalize
 # K.set_session(sess)
 
 TOKENIZER_STATE_PATH = 'saved_models/tokenizer.p'
+GLOVE_EMBEDDING_PATH = 'saved_models/glove.6B.100d.txt'
 
 class Attention(Layer):
-	def __init__(self, **kwargs):
+	def __init__(self, regularizer=None, **kwargs):
 		super(Attention, self).__init__(**kwargs)
+		self.regularizer = regularizer
+		self.supports_masking = True
 
 	def build(self, input_shape):
 		# Create a trainable weight variable for this layer.
 		self.context = self.add_weight(name='context', 
 									   shape=(input_shape[-1], 1),
 									   initializer=initializers.RandomNormal(
-									   	mean=0.0, stddev=0.05, seed=None),
+									   		mean=0.0, stddev=0.05, seed=None),
+									   regularizer=self.regularizer,
 									   trainable=True)
 		super(Attention, self).build(input_shape)
 
-	def call(self, x):
+	def call(self, x, mask=None):
 		attention_in = K.exp(K.squeeze(K.dot(x, self.context), axis=-1))
 		attention = attention_in/K.expand_dims(K.sum(attention_in, axis=-1), -1)
+
+		if mask is not None:
+			# use only the inputs specified by the mask
+			# import pdb; pdb.set_trace()
+			attention = attention*K.cast(mask, 'float32')
+
 		weighted_sum = K.batch_dot(K.permute_dimensions(x, [0, 2, 1]), attention)
 		return weighted_sum
 
@@ -56,37 +68,59 @@ class HNATT():
 		self.model = None
 		self.word_attention_model = None
 		self.tokenizer = None
+		self.class_count = 2
 
 	def _generate_embedding(self):
-		pass
+		return load_glove_embedding(GLOVE_EMBEDDING_PATH, 100, self.tokenizer.word_index)
 
-	def _build_model(self):
+	def _build_model(self, n_classes=2, embedding_dim=100, transfer_embeddings=False):
+		l2_reg = regularizers.l2(1e-8)
+		# embedding_weights = np.random.normal(0, 1, (len(self.tokenizer.word_index) + 1, embedding_dim))
+		# embedding_weights = np.zeros((len(self.tokenizer.word_index) + 1, embedding_dim))
+		embedding_weights = np.random.normal(0, 1, (len(self.tokenizer.word_index) + 1, embedding_dim))
+		if transfer_embeddings:
+			embedding_weights = self._generate_embedding()
+
 		# Generate word-attention-weighted sentence scores
 		sentence_in = Input(shape=(self.MAX_SENTENCE_LENGTH,), dtype='int32')
-		embedded_word_seq = Embedding(self.VOCABULARY_SIZE,
-									200,
-									# weights=[word_embedding],
-									input_length=self.MAX_SENTENCE_LENGTH,
-									trainable=True)(sentence_in)
-		word_encoder = Bidirectional(GRU(50, return_sequences=True))(embedded_word_seq)
-		dense_transform_w = Dense(100, activation='tanh', name='dense_transform_w')(word_encoder)
+		embedded_word_seq = Embedding(
+			self.VOCABULARY_SIZE,
+			embedding_dim,
+			weights=[embedding_weights],
+			input_length=self.MAX_SENTENCE_LENGTH,
+			trainable=True,
+			mask_zero=True,
+			name='word_embeddings',)(sentence_in)
+		word_encoder = Bidirectional(
+			GRU(50, return_sequences=True, kernel_regularizer=l2_reg))(embedded_word_seq)
+		dense_transform_w = Dense(
+			100, 
+			activation='relu', 
+			name='dense_transform_w', 
+			kernel_regularizer=l2_reg)(word_encoder)
 		attention_weighted_sentence = Model(
-			sentence_in, Attention(name='word_attention')(dense_transform_w))
+			sentence_in, Attention(name='word_attention', regularizer=l2_reg)(dense_transform_w))
 		self.word_attention_model = attention_weighted_sentence
 		attention_weighted_sentence.summary()
 
 		# Generate sentence-attention-weighted document scores
 		texts_in = Input(shape=(self.MAX_SENTENCE_COUNT, self.MAX_SENTENCE_LENGTH), dtype='int32')
 		attention_weighted_sentences = TimeDistributed(attention_weighted_sentence)(texts_in)
-		sentence_encoder = Bidirectional(GRU(50, return_sequences=True))(attention_weighted_sentences)
-		dense_transform_s = Dense(100, activation='tanh', name='dense_transform_s')(sentence_encoder)
-		attention_weighted_text = Attention(name='sentence_attention')(dense_transform_s)
-		prediction = Dense(5, activation='softmax')(attention_weighted_text)
+		sentence_encoder = Bidirectional(
+			GRU(50, return_sequences=True, kernel_regularizer=l2_reg))(attention_weighted_sentences)
+		dense_transform_s = Dense(
+			100, 
+			activation='relu', 
+			name='dense_transform_s',
+			kernel_regularizer=l2_reg)(sentence_encoder)	
+		attention_weighted_text = Attention(name='sentence_attention', regularizer=l2_reg)(dense_transform_s)
+		prediction = Dense(n_classes, activation='softmax')(attention_weighted_text)
 		model = Model(texts_in, prediction)
 		model.summary()
 
-		model.compile(#RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0),
-					  optimizer=SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True),
+		model.compile(#optimizer=RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0),
+					  #optimizer=SGD(lr=0.01, decay=1e-6, nesterov=True),
+					  optimizer=Adam(lr=0.001),
 		              loss='categorical_crossentropy',
 		              metrics=['acc'])
 
@@ -104,7 +138,7 @@ class HNATT():
 			self._create_reverse_word_index()
 
 	def _fit_on_texts(self, texts):
-		self.tokenizer = Tokenizer(filters='"()*,-/;[\]^_`{|}~');
+		self.tokenizer = Tokenizer(filters='"()*,-/;[\]^_`{|}~', oov_token='UNK');
 		all_sentences = []
 		max_sentence_count = 0
 		max_sentence_length = 0
@@ -136,12 +170,6 @@ class HNATT():
 			encoded_texts[i][-len(encoded_text):] = encoded_text
 		return encoded_texts
 
-	def _to_one_hot(self, labels, dimension=5):
-		results = np.zeros((len(labels), dimension))
-		for i, label in enumerate(labels):
-			results[i, label - 1] = 1.
-		return results
-
 	def _save_tokenizer_on_epoch_end(self, epoch):
 		if epoch == 0:
 			tokenizer_state = {
@@ -155,14 +183,13 @@ class HNATT():
 	def train(self, train_x, train_y, checkpoint_path=None):
 		# fit tokenizer
 		self._fit_on_texts(train_x)
-		self.model = self._build_model()
+		self.model = self._build_model(n_classes=train_y.shape[-1], transfer_embeddings=False)
 		encoded_train_x = self._encode_texts(train_x)
-		encoded_train_y = self._to_one_hot(train_y)
 		callbacks = [
-			EarlyStopping(
-				monitor='acc',
-				patience=2,
-			),
+			# EarlyStopping(
+			# 	monitor='acc',
+			# 	patience=2,
+			# ),
 			ReduceLROnPlateau(),
 			# keras.callbacks.TensorBoard(
 			# 	log_dir="logs/final/{}".format(datetime.datetime.now()), 
@@ -183,16 +210,15 @@ class HNATT():
 					save_weights_only=False,
 				)
 			)
-
-		self.model.fit(x=encoded_train_x, y=encoded_train_y, 
-					   batch_size=64, 
-					   epochs=1, 
+		self.model.fit(x=encoded_train_x, y=train_y, 
+					   batch_size=16, 
+					   epochs=16, 
 					   verbose=1, 
 					   callbacks=callbacks,
 					   validation_split=0.1,  
-					   shuffle=False)
+					   shuffle=True)
 
-	def _encode_input(self, x):
+	def _encode_input(self, x, log=False):
 		x = np.array(x)
 		if not x.shape:
 			x = np.expand_dims(x, 0)
@@ -200,8 +226,8 @@ class HNATT():
 		return self._encode_texts(texts)
 
 	def predict(self, x):
-		x = self._encode_input(x)
-		return self.model.predict(x)
+		encoded_x = self._encode_texts(x)
+		return self.model.predict(encoded_x)
 
 	def activation_maps(self, text, as_json=False):
 		normalized_text = normalize(text)
@@ -239,6 +265,7 @@ class HNATT():
 		if as_json:
 			u_sattention = u_sattention.astype(float)
 		nopad_sattention = u_sattention[-len(normalized_text):]
+
 		nopad_sattention = nopad_sattention/np.expand_dims(np.sum(nopad_sattention, -1), -1)
 
 		activation_map = list(zip(word_activation_maps, nopad_sattention))
@@ -246,5 +273,4 @@ class HNATT():
 			return json.dumps(activation_map)		
 
 		return activation_map
-
 
