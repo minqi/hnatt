@@ -49,7 +49,7 @@ h.train(train_x, train_y,
 	batch_size=16,
 	epochs=16,
 	embeddings_path=EMBEDDINGS_PATH, 
-	saved_model_dir='saved_models',
+	saved_model_dir=SAVED_MODEL_DIR,
 	saved_model_filename=SAVED_MODEL_FILENAME)
 ```
 You can print out sentence and word-level attention activations like so:
