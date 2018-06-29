@@ -28,7 +28,7 @@ pip install -r requirements.txt
 
 Download the latest Yelp dataset from  https://www.kaggle.com/yelp-dataset/yelp-dataset and move the unzipped folder to `data/yelp-dataset` in the project directory.
 
-Give it a spin
+Give it a spin.
 ```bash
 python main.py
 ```
