@@ -1,3 +1,5 @@
+import numpy as np
+
 from flask import Flask
 from flask import render_template
 from flask import request
@@ -6,13 +8,17 @@ from flask import jsonify
 import tensorflow as tf
 from keras import backend as K
 
+from util import text_util
 from hnatt import HNATT
+
+SAVED_MODEL_DIR = 'saved_models'
+SAVED_MODEL_FILENAME = 'model.h5'
 
 app = Flask(__name__)
 
 K.clear_session()
 h = HNATT()
-h.load_weights('saved_models/model.h5')
+h.load_weights(SAVED_MODEL_DIR, SAVED_MODEL_FILENAME)
 graph = tf.get_default_graph()
 
 @app.route('/')
@@ -26,9 +32,18 @@ def activations():
 	"""
 	if request.method == 'GET':
 		text = request.args.get('text', '')
+		ntext = text_util.normalize(text)
+
 		global graph
 		with graph.as_default():
-			activation_maps = h.activation_maps(text, as_json=True)
-			return jsonify(activation_maps)
+			activation_maps = h.activation_maps(text, websafe=True)
+			p = h.predict([text])[0]
+			prediction = np.argmax(p).astype(float)
+			data = {
+				'activations': activation_maps,
+				'normalizedText': ntext,
+				'prediction': prediction
+			}
+			return jsonify(data)
 	else:
 		return Response(status=501)

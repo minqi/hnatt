@@ -1,4 +1,4 @@
-import datetime, pickle, json
+import datetime, pickle, os
 import numpy as np
 import keras
 from keras.models import *
@@ -70,16 +70,16 @@ class HNATT():
 		self.tokenizer = None
 		self.class_count = 2
 
-	def _generate_embedding(self):
-		return load_glove_embedding(GLOVE_EMBEDDING_PATH, 100, self.tokenizer.word_index)
+	def _generate_embedding(self, path, dim):
+		return load_glove_embedding(path, dim, self.tokenizer.word_index)
 
-	def _build_model(self, n_classes=2, embedding_dim=100, transfer_embeddings=False):
+	def _build_model(self, n_classes=2, embedding_dim=100, embeddings_path=False):
 		l2_reg = regularizers.l2(1e-8)
 		# embedding_weights = np.random.normal(0, 1, (len(self.tokenizer.word_index) + 1, embedding_dim))
 		# embedding_weights = np.zeros((len(self.tokenizer.word_index) + 1, embedding_dim))
 		embedding_weights = np.random.normal(0, 1, (len(self.tokenizer.word_index) + 1, embedding_dim))
-		if transfer_embeddings:
-			embedding_weights = self._generate_embedding()
+		if embeddings_path:
+			embedding_weights = self._generate_embedding(embeddings_path, embedding_dim)
 
 		# Generate word-attention-weighted sentence scores
 		sentence_in = Input(shape=(self.MAX_SENTENCE_LENGTH,), dtype='int32')
@@ -126,16 +126,21 @@ class HNATT():
 
 		return model
 
-	def load_weights(self, path):
+	def load_weights(self, saved_model_dir, saved_model_filename):
 		with CustomObjectScope({'Attention': Attention}):
-			self.model = load_model(path)
+			self.model = load_model(os.path.join(saved_model_dir, saved_model_filename))
 			self.word_attention_model = self.model.get_layer('time_distributed_1').layer
-			tokenizer_state = pickle.load(open(TOKENIZER_STATE_PATH, "rb" ))
+			tokenizer_path = os.path.join(
+				saved_model_dir, self._get_tokenizer_filename(saved_model_filename))
+			tokenizer_state = pickle.load(open(tokenizer_path, "rb" ))
 			self.tokenizer = tokenizer_state['tokenizer']
 			self.MAX_SENTENCE_COUNT = tokenizer_state['maxSentenceCount']
 			self.MAX_SENTENCE_LENGTH = tokenizer_state['maxSentenceLength']
 			self.VOCABULARY_SIZE = tokenizer_state['vocabularySize']
 			self._create_reverse_word_index()
+
+	def _get_tokenizer_filename(self, saved_model_filename):
+		return saved_model_filename + '.tokenizer'
 
 	def _fit_on_texts(self, texts):
 		self.tokenizer = Tokenizer(filters='"()*,-/;[\]^_`{|}~', oov_token='UNK');
@@ -170,7 +175,7 @@ class HNATT():
 			encoded_texts[i][-len(encoded_text):] = encoded_text
 		return encoded_texts
 
-	def _save_tokenizer_on_epoch_end(self, epoch):
+	def _save_tokenizer_on_epoch_end(self, path, epoch):
 		if epoch == 0:
 			tokenizer_state = {
 				'tokenizer': self.tokenizer,
@@ -178,12 +183,19 @@ class HNATT():
 				'maxSentenceLength': self.MAX_SENTENCE_LENGTH,
 				'vocabularySize': self.VOCABULARY_SIZE
 			}
-			pickle.dump(tokenizer_state, open(TOKENIZER_STATE_PATH, "wb" ) )
+			pickle.dump(tokenizer_state, open(path, "wb" ) )
 
-	def train(self, train_x, train_y, checkpoint_path=None):
+	def train(self, train_x, train_y, 
+		batch_size=16, epochs=1, 
+		embedding_dim=100,
+		embeddings_path=False, 
+		saved_model_dir='saved_models', saved_model_filename=None,):
 		# fit tokenizer
 		self._fit_on_texts(train_x)
-		self.model = self._build_model(n_classes=train_y.shape[-1], transfer_embeddings=False)
+		self.model = self._build_model(
+			n_classes=train_y.shape[-1], 
+			embedding_dim=100,
+			embeddings_path=embeddings_path)
 		encoded_train_x = self._encode_texts(train_x)
 		callbacks = [
 			# EarlyStopping(
@@ -198,21 +210,23 @@ class HNATT():
 			# 	write_images=True
 			# )
 			LambdaCallback(
-				on_epoch_end=lambda epoch, logs: self._save_tokenizer_on_epoch_end(epoch))
+				on_epoch_end=lambda epoch, logs: self._save_tokenizer_on_epoch_end(
+					os.path.join(saved_model_dir, 
+						self._get_tokenizer_filename(saved_model_filename)), epoch))
 		]
 
-		if checkpoint_path:
+		if saved_model_filename:
 			callbacks.append(
 				ModelCheckpoint(
-					filepath=checkpoint_path,
+					filepath=os.path.join(saved_model_dir, saved_model_filename),
 					monitor='val_acc',
 					save_best_only=True,
 					save_weights_only=False,
 				)
 			)
 		self.model.fit(x=encoded_train_x, y=train_y, 
-					   batch_size=16, 
-					   epochs=8, 
+					   batch_size=batch_size, 
+					   epochs=epochs, 
 					   verbose=1, 
 					   callbacks=callbacks,
 					   validation_split=0.1,  
@@ -229,7 +243,7 @@ class HNATT():
 		encoded_x = self._encode_texts(x)
 		return self.model.predict(encoded_x)
 
-	def activation_maps(self, text, as_json=False):
+	def activation_maps(self, text, websafe=False):
 		normalized_text = normalize(text)
 		encoded_text = self._encode_input(text)[0]
 
@@ -239,7 +253,7 @@ class HNATT():
 		hidden_word_encodings = hidden_word_encoding_out.predict(encoded_text)
 		word_context = self.word_attention_model.get_layer('word_attention').get_weights()[0]
 		u_wattention = encoded_text*np.exp(np.squeeze(np.dot(hidden_word_encodings, word_context)))
-		if as_json:
+		if websafe:
 			u_wattention = u_wattention.astype(float)
 
 		# generate word, activation pairs
@@ -262,15 +276,13 @@ class HNATT():
 			hidden_sentence_encoding_out.predict(np.expand_dims(encoded_text, 0)), 0)
 		sentence_context = self.model.get_layer('sentence_attention').get_weights()[0]
 		u_sattention = np.exp(np.squeeze(np.dot(hidden_sentence_encodings, sentence_context), -1))
-		if as_json:
+		if websafe:
 			u_sattention = u_sattention.astype(float)
 		nopad_sattention = u_sattention[-len(normalized_text):]
 
 		nopad_sattention = nopad_sattention/np.expand_dims(np.sum(nopad_sattention, -1), -1)
 
-		activation_map = list(zip(word_activation_maps, nopad_sattention))
-		if as_json:
-			return json.dumps(activation_map)		
+		activation_map = list(zip(word_activation_maps, nopad_sattention))	
 
 		return activation_map
 

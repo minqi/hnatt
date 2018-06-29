@@ -112,7 +112,7 @@
 			</div>
 			<div class='submit-btn' onclick='onClickSubmit()'>Run</div>
 			<div class='bottom-box'>
-				<div class='activation-map'>
+				<div class='activation-map' id='activation-map'>
 					<ul id='sentence-list'></ul>
 				</div>
 			</div>	
@@ -131,8 +131,8 @@
 				let requestActivationMap = function(text, callback) {
 					xhttp.onreadystatechange = function() {
 					    if (this.readyState == 4 && this.status == 200) {
-					    	const activations = JSON.parse(this.responseText);
-					      callback(JSON.parse(activations));
+					    	const data = JSON.parse(this.responseText);
+					      callback(data);
 					    }
 					};
 					xhttp.open("GET", "activations?text=" + text, true);
@@ -152,51 +152,63 @@
 					return `rgba(255, 0, 0, ${a})`;
 				}
 
-				let createSentenceElement = function(sa, words) {
-					// let sentenceLabel = document.createElement("div");
-					// sentenceLabel.className='sentence-label';
-					// sentenceLabel.style.backgroundColor = getSentenceColorForActivation(sa);
-
+				let createSentenceElement = function(sa, words, originalWords) {
 					let sentenceElement = document.createElement("li");
 					sentenceElement.className	 = 'sentence'; 
 					sentenceElement.style.backgroundColor = getSentenceColorForActivation(sa);
-					// sentenceElement.appendChild(sentenceLabel);
 
 					let wordsContainer = document.createElement('div');
 					wordsContainer.className = 'words-container';
 					wordsContainer.style.backgroundColor = 'white';
 					let s_weight = Math.sqrt(sa);
 					for (let i = 0; i < words.length; i++) {
-						let w = words[i];
-						wordsContainer.appendChild(createWordElement(w, s_weight));
+						let a = words[i][1];
+						let w = originalWords[i]
+						wordsContainer.appendChild(createWordElement(w, a, s_weight));
 					}
-					wordsContainer.appendChild(createWordElement([['.'], 0], sa))
+					wordsContainer.appendChild(createWordElement('.', 0, sa))
 					sentenceElement.appendChild(wordsContainer);
 
 					return sentenceElement;
 				}
 
-				let createWordElement = function(w, s_weight) {
+				let createWordElement = function(w, a, s_weight) {
 					let wordElement = document.createElement("div");
 					wordElement.className = 'word';
 					wordElement.style.backgroundColor = 
-						getWordColorForActivation(s_weight*w[1])
-					wordElement.innerHTML = w[0];
+						getWordColorForActivation(s_weight*a)
+					wordElement.innerHTML = w;
 					return wordElement;
 				}
 
-				let renderActivationMap = function(activations) {
-					console.log(activations)
+				let renderActivationMap = function(data) {
+					activations = data.activations;
+					normalizedText = data.normalizedText;
 					const sentenceList = document.getElementById('sentence-list');
 					while (sentenceList.firstChild) {
 						sentenceList.removeChild(sentenceList.firstChild);
 					}
+					let predictionContainer = document.getElementById('prediction-container');
+					if (predictionContainer) {
+						predictionContainer.remove();
+					}
 					for (let i = 0; i < activations.length; i++) {
 						let s = activations[i];
 						let words = s[0];
+						let originalWords = normalizedText[i].split(' ');
 						let sa = s[1];
-						sentenceList.appendChild(createSentenceElement(sa, words))
+						sentenceList.appendChild(createSentenceElement(sa, words, originalWords))
 					}
+
+					renderPrediction(data.prediction);
+				}
+
+				let renderPrediction = function(prediction) {
+					let predictionContainer = document.createElement("div");
+					predictionContainer.id = "prediction-container";
+					let predictionText = 'Predicted rating: ' + (Math.round(prediction) + 1);
+					predictionContainer.innerHTML = predictionText;
+					document.getElementById("activation-map").appendChild(predictionContainer);
 				}
 
 			</script>
