@@ -15,7 +15,7 @@ if __name__ == '__main__':
 		batch_size=16,
 		epochs=16,
 		embeddings_path=None, 
-		saved_model_dir='saved_models',
+		saved_model_dir=SAVED_MODEL_DIR,
 		saved_model_filename=SAVED_MODEL_FILENAME)
 
 	h.load_weights(SAVED_MODEL_DIR, SAVED_MODEL_FILENAME)
