@@ -1,4 +1,4 @@
-import yelp
+import util.yelp as yelp
 from hnatt import HNATT
 
 YELP_DATA_PATH = 'data/yelp-dataset/yelp_review.csv'
