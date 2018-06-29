@@ -7,14 +7,14 @@ SAVED_MODEL_FILENAME = 'model.h5'
 EMBEDDINGS_PATH = 'saved_models/glove.6B.100d.txt'
 
 if __name__ == '__main__':
-	(train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=2e3)
+	(train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=5e3)
 
 	# initialize HNATT 
 	h = HNATT()	
 	h.train(train_x, train_y, 
 		batch_size=16,
 		epochs=16,
-		embeddings_path=EMBEDDINGS_PATH, 
+		embeddings_path=None, 
 		saved_model_dir='saved_models',
 		saved_model_filename=SAVED_MODEL_FILENAME)
 
