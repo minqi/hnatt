@@ -12,7 +12,7 @@ from util import text_util
 from hnatt import HNATT
 
 SAVED_MODEL_DIR = 'saved_models'
-SAVED_MODEL_FILENAME = 'model.h5'
+SAVED_MODEL_FILENAME = 'binary_model_balanced.h5'
 
 app = Flask(__name__)
 
@@ -32,17 +32,21 @@ def activations():
 	"""
 	if request.method == 'GET':
 		text = request.args.get('text', '')
+		if len(text.strip()) == 0:
+			return Response(status=400)
+
 		ntext = text_util.normalize(text)
 
 		global graph
 		with graph.as_default():
 			activation_maps = h.activation_maps(text, websafe=True)
-			p = h.predict([text])[0]
-			prediction = np.argmax(p).astype(float)
+			preds = h.predict([ntext])[0]
+			prediction = np.argmax(preds).astype(float)
 			data = {
 				'activations': activation_maps,
 				'normalizedText': ntext,
-				'prediction': prediction
+				'prediction': prediction,
+				'binary': preds.shape[0] == 2
 			}
 			return jsonify(data)
 	else:

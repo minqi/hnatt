@@ -8,7 +8,6 @@ from keras.callbacks import *
 from keras import regularizers
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.preprocessing.text import one_hot
 from keras import backend as K
 from keras.utils import CustomObjectScope
 from keras.engine.topology import Layer

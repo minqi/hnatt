@@ -205,14 +205,24 @@
 						sentenceList.appendChild(createSentenceElement(sa, words, originalWords))
 					}
 
-					renderPrediction(data.prediction);
+					renderPrediction(data.prediction, data.binary);
 				}
 
-				let renderPrediction = function(prediction) {
+				let renderPrediction = function(prediction, binary) {
 					let predictionContainer = document.createElement("div");
 					predictionContainer.id = "prediction-container";
-					let predictionText = 
-						'Predicted rating: ' + (Math.round(prediction) + 1) + ' out of 5 stars';
+					prediction = Math.round(prediction);
+					let predictionText = 'Predicted rating: ';
+					if (binary) {
+						let sentiment = 'Positive';
+						if (prediction == 0) {
+							sentiment = 'Negative';
+						}
+						predictionText += sentiment;
+					}
+					else {
+						predictionText += (prediction + 1) + ' out of 5 stars';
+					}
 					predictionContainer.innerHTML = predictionText;
 					document.getElementById("activation-map").appendChild(predictionContainer);
 				}

@@ -7,7 +7,7 @@ SAVED_MODEL_FILENAME = 'model.h5'
 EMBEDDINGS_PATH = 'saved_models/glove.6B.100d.txt'
 
 if __name__ == '__main__':
-	(train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=5e3)
+	(train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=1e4, binary=False)
 
 	# initialize HNATT 
 	h = HNATT()	
@@ -21,6 +21,9 @@ if __name__ == '__main__':
 	h.load_weights(SAVED_MODEL_DIR, SAVED_MODEL_FILENAME)
 
 	# embeddings = h.word_embeddings(train_x)
+	# preds = h.predict(train_x)
+	# print(preds)
+	# import pdb; pdb.set_trace()
 
 	# print attention activation maps across sentences and words per sentence
 	activation_maps = h.activation_maps(

@@ -34,12 +34,14 @@ python main.py
 ```
 
 ### Train your model
-First, load `n` reviews from yelp for training, with 90/10 training/test split
+First, load `n` reviews from yelp for training, with 90/10 training/test split:
 ```python
 import util.yelp as yelp
 (train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=1e5, train_ratio=0.9)
 ```
-Train your HNATT
+You can also choose to polarize the Yelp ratings into binary labels, corresponding to negative and positive by passing in an optional argument, `binary=true`. 
+
+Now you're ready to train your model.
 ```python
 from hnatt import HNATT
 h = HNATT()	
@@ -50,13 +52,15 @@ h.train(train_x, train_y,
 	saved_model_dir='saved_models',
 	saved_model_filename=SAVED_MODEL_FILENAME)
 ```
-
-View sentence and word-level attention activations
+You can print out sentence and word-level attention activations like so:
 ```python
 activation_maps = h.activation_maps('loved it! will definitely go back again.')
 print(activation_maps)
 ```
-### Visualizing activations
+### Performance
+When trained on random samples of 10,000 Yelp reviews, loaded with `binary=true and balanced classes in training and test sets, this implementation of HNATT reaches 100% accuracy on the test set, and consistently around 90% accuracy on the validation set.
+
+### Visualizing attention
 Once you train an HNATT model and save it locally using the `saved_model_dir` and `saved_model_filename` arguments to `train`, you can easily play with the saved model in an interactive web app by running the following:
 ```python
 python run_hnatt_viewer.py
