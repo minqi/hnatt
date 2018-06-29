@@ -10,7 +10,9 @@ HNATT is a deep neural network for document classification. It learns hierarchic
 | `hnatt.py`* | Main HNATT implementation with custom Attention layer. |
 | `yelp.py` | Data loader for Yelp review data used for training and testing. |
 | `text_util.py` | Utility function for normalizing review texts. |
+| `glove.py` | Utility function for loading GloVe embedding weights from a file. |
 | `main.py` | Demo that trains HNATT on a subset of Yelp reviews and displays attention activation maps at both sentence and word levels on an example review. |
+| `app/` | A simple Flask app for exploring a trained HNATT, allowing you to easily make predictions based on a text input and visualize the resulting attention activations at both word and sentence levels. |
 
 *A TensorFlow backend is assumed by the Attention layer.
 
@@ -22,22 +24,29 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+Download the latest Yelp dataset from  https://www.kaggle.com/yelp-dataset/yelp-dataset and move the unzipped folder to `data/yelp-dataset` in the project directory.
+
 Give it a spin
 ```bash
 python main.py
 ```
 
-Load `n` reviews from yelp for training, with 90/10 training/test split:
+### Train your model
+First, load `n` reviews from yelp for training, with 90/10 training/test split
 ```python
 import yelp
 (train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=1e5, train_ratio=0.9)
 ```
-
 Train your HNATT
 ```python
 from hnatt import HNATT
-h = HNATT()
-h.train(train_x, train_y, checkpoint_path='saved_models/model.h5')
+h = HNATT()	
+h.train(train_x, train_y, 
+	batch_size=16,
+	epochs=16,
+	embeddings_path=EMBEDDINGS_PATH, 
+	saved_model_dir='saved_models',
+	saved_model_filename=SAVED_MODEL_FILENAME)
 ```
 
 View sentence and word-level attention activations
@@ -45,3 +54,9 @@ View sentence and word-level attention activations
 activation_maps = h.activation_maps('loved it! will definitely go back again.')
 print(activation_maps)
 ```
+### Visualizing activations
+Once you train an HNATT model and save it locally using the `saved_model_dir` and `saved_model_filename` arguments to `train`, you can easily play with the saved model in an interactive web app by running the following:
+```python
+python run_hnatt_viewer.py
+```
+You can then visit `localhost:5000` to interact with your HNATT.
