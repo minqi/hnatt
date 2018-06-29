@@ -1,5 +1,5 @@
 # HNATT
-This is a Keras implementation of the **H**ierarchical **N**etwork with **Att**ention architecture [(Yang et al, 2016)](http://www.cs.cmu.edu/~./hovy/papers/16HLT-hierarchical-attention-networks.pdf). 
+This is a Keras implementation of the **H**ierarchical **N**etwork with **Att**ention architecture [(Yang et al, 2016)](http://www.cs.cmu.edu/~./hovy/papers/16HLT-hierarchical-attention-networks.pdf), and comes with a webapp for easily interacting with the trained models.
 
 ![Screenshot of HNATT in action](hnatt_example.png "Example of HNATT attention and prediction")
 
