@@ -39,9 +39,9 @@ First, load `n` reviews from yelp for training, with 90/10 training/test split:
 import util.yelp as yelp
 (train_x, train_y), (test_x, test_y) = yelp.load_data(path=YELP_DATA_PATH, size=1e5, train_ratio=0.9)
 ```
-You can also choose to polarize the Yelp ratings into binary labels, corresponding to negative and positive by passing in an optional argument, `binary=true`. 
+You can also choose to polarize the Yelp ratings into binary labels, corresponding to negative and positive sentiments, by passing in an optional argument, `binary=true`. 
 
-Now you're ready to train your model.
+Now you're ready to train your model:
 ```python
 from hnatt import HNATT
 h = HNATT()	
