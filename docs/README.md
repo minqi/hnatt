@@ -1,11 +1,10 @@
 # HNATT
 This is a Keras implementation of the **H**ierarchical **N**etwork with **Att**ention architecture [(Yang et al, 2016)](http://www.cs.cmu.edu/~./hovy/papers/16HLT-hierarchical-attention-networks.pdf). 
 
+![Screenshot of HNATT in action](hnatt_example.png "Example of HNATT attention and prediction")
+
 ### Overview
 HNATT is a deep neural network for document classification. It learns hierarchical hidden representations of documents at word, sentence, and document levels. At both the word and sentence levels, HNATT makes use of an attention mechanism, in which it learns a context vector that determines a relevance weighting for its learned encoding of words and sentences. This model has been shown to outperform hierarchical models without attention, indicating that learning an input-dependent weighting across the various substructures of the document leads to improved performance in classification tasks.
-
-[https://github.com/minqi/hnatt/blob/master/.github/hnatt_example.png](.github/hnatt_example.png)
-![Screenshot of HNATT in action](hnatt_example.png "Example of HNATT attention and prediction")
 
 ### Contents
 | Module | Description |
