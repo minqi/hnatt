@@ -12,7 +12,7 @@ from util import text_util
 from hnatt import HNATT
 
 SAVED_MODEL_DIR = 'saved_models'
-SAVED_MODEL_FILENAME = 'binary_model_balanced.h5'
+SAVED_MODEL_FILENAME = 'model.h5'
 
 app = Flask(__name__)
 
