@@ -12,7 +12,7 @@ HNATT is a deep neural network for document classification. It learns hierarchic
 | `hnatt.py`* | Main HNATT implementation with custom Attention layer. |
 | `util.yelp.py` | Data loader for Yelp review data used for training and testing. |
 | `util.text_util.py` | Utility function for normalizing review texts. |
-| `util.glove.py` | Utility function for loading GloVe embedding weights from a file. |
+| `util.glove.py` | Utility function for loading GloVe embedding weights from a file. You can download the embeddings [here](http://nlp.stanford.edu/data/glove.6B.zip). In practice, initializing the embedding layer with GloVe embeddings did not bring any significant improvements. |
 | `main.py` | Demo that trains HNATT on a subset of Yelp reviews and displays attention activation maps at both sentence and word levels on an example review. |
 | `app/` | A simple Flask app for exploring a trained HNATT, allowing you to easily make predictions based on a text input and visualize the resulting attention activations at both word and sentence levels. |
 
